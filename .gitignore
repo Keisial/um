@@ -1,3 +1,4 @@
 um
 *.um
+*.o
 sandmark.tmp

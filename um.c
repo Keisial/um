@@ -6,8 +6,6 @@
 #include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <malloc.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -45,7 +43,9 @@ static uint32_t scroll_size;
 
 void load_scroll_file(const char* filename) {
 	struct stat st;
-	int fd = open(filename, O_RDONLY);
+	int fd, count;
+
+	fd = open(filename, O_RDONLY);
 	if (fd == -1) {
 		err(1, "Error opening %s", filename);
 	}
@@ -59,10 +59,11 @@ void load_scroll_file(const char* filename) {
 		errx(1, "Empty scroll %s", filename);
 	}
 
+	count = st.st_size / 4;
 	FILE* f = fdopen(fd, "rb");
 	int i, ok;
-	scroll.ptr = realloc(scroll.ptr, scroll_size*4 + st.st_size);
-	for (i = 0; i < st.st_size / 4; i++) {
+	scroll = um_realloc(scroll, scroll_size + count);
+	for (i = 0; i < count; i++) {
 		uint32_t temp;
 		ok = fread(&temp, 1, 4, f);
 		if (ok) {
@@ -74,7 +75,7 @@ void load_scroll_file(const char* filename) {
 	}
 	fclose(f);
 
-	scroll_size += st.st_size / 4;
+	scroll_size += count;
 }
 
 static platter registers[8];
@@ -178,7 +179,7 @@ void run_scroll() {
                   exclusively the 0 bit, and that identifies no other
                   active allocated array, is placed in the B register.
                  */
-                 PLATTER(B).ptr = calloc(REG(C), 4);
+                 PLATTER(B) = um_alloc(PLATTER(C));
                  break;
 
            Operation( 9, Abandonment )
@@ -186,7 +187,7 @@ void run_scroll() {
                   The array identified by the register C is abandoned.
                   Future allocations may then reuse that identifier.
                  */
-                 free(ARRAY(C));
+                 um_free(PLATTER(C));
                  if (!REG(C)) Fail("Array '0' was abandoned");
                  break;
 
@@ -226,12 +227,11 @@ void run_scroll() {
                   velocity.
                  */
                 if (REG(B)) {
-					free(scroll.ptr);
+					um_free(scroll);
 
 					/* Duplicate the array and use the duplicate as array '0' */
-					scroll_size = malloc_usable_size(PLATTER(B).ptr);
-					scroll.ptr = malloc(scroll_size);
-					memcpy(scroll.ptr, ARRAY(B), scroll_size);
+					scroll_size = um_alloc_size(PLATTER(B));
+					scroll = um_duplicate(PLATTER(B));
 				}
                 ef = REG(C) - 1;
 				break;

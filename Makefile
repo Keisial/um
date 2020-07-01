@@ -1,11 +1,16 @@
 CC=gcc
 CFLAGS=-Wall -O3 -Wextra -m32
+LDFLAGS=-m32
+OBJS=um.o um_malloc.o
 
-um: um.c um.h
-	$(CC) $(CFLAGS) -o $@ um.c
+um: $(OBJS)
+	$(CC) $(LDFLAGS) -o $@ $^
+
+%.o: %.c
+	$(CC) -c $(CFLAGS) -o $@ $^
 
 clean:
-	rm -f um sandmark.tmp
+	rm -f um $(OBJS) sandmark.tmp
 
 check:
 	./um docs/sandmark.umz | tee sandmark.tmp
