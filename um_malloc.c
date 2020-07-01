@@ -4,13 +4,29 @@
 
 #include "um.h"
 
+int memdebug = 0;
+int memstats = 0;
+
+static struct {
+	int allocations, reallocations, duplications, frees;
+	uint32_t maxsize;
+} statistics;
+
+#define HIT(x) do { if (memstats) { statistics.x++; } } while (0)
+
 platter um_alloc(platter size) {
 	platter p = { .ptr = calloc(size.v, 4) };
-	
+	HIT(allocations);
+	if (memstats && size.v > statistics.maxsize) statistics.maxsize = size.v;
+
+	if (memdebug) {
+		printf("alloc(%u) = %p\n", size.v, p.ptr);
+	}
 	return p;
 }
 
 platter um_realloc(platter p, uint32_t size) {
+	HIT(reallocations);
 	p.ptr = realloc(p.ptr, size * 4);
 	return p;
 }
@@ -21,6 +37,7 @@ uint32_t um_alloc_size(platter p) {
 
 platter um_duplicate(platter old) {
 	platter new;
+	HIT(duplications);
 	size_t size = um_alloc_size(old) * 4;
 	new.ptr = malloc(size);
 	memcpy(new.ptr, old.ptr, size);
@@ -29,5 +46,21 @@ platter um_duplicate(platter old) {
 }
 
 void um_free(platter ptr) {
+	HIT(frees);
 	free(ptr.ptr);
+
+	if (memdebug) {
+		printf("free(%p)\n", ptr.ptr);
+	}
+}
+
+void um_memory_stats() {
+	if (!memstats) return;
+
+	#define STAT(x) printf(#x ": %d\n", statistics.x)
+	STAT(allocations);
+	STAT(reallocations);
+	STAT(duplications);
+	STAT(frees);
+	STAT(maxsize);
 }

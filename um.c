@@ -15,6 +15,8 @@
 
 #include "um.h"
 
+extern int memdebug;
+extern int memstats;
 static int debug = 0;
 static int dumpregs = 0;
 #define option(X) if (argc > 1 && !strcmp(argv[1], "--"#X)) { argv++; argc--; X = 1; }
@@ -23,9 +25,11 @@ int main(int argc, char** argv) {
 	setvbuf(stdout, NULL, _IOLBF, 0);
 	option(debug)
 	option(dumpregs)
+	option(memdebug)
+	option(memstats)
 
 	if (argc < 2) {
-		errx(1, "Usage: %s [--debug] [--dumpregs] <scroll1> [<scroll2>...]", argv[0]);
+		errx(1, "Usage: %s [--debug [--dumpregs]] [--memdebug] [--memstats] <scroll1> [<scroll2>...]", argv[0]);
 	}
 
 	while (argv[1]) {
@@ -35,6 +39,7 @@ int main(int argc, char** argv) {
 
 	run_scroll();
 
+	um_memory_stats();
 	return 0;
 }
 
