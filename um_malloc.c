@@ -12,28 +12,23 @@ static struct {
 	uint32_t maxsize;
 } statistics;
 
-#define HIT(x) do { if (memstats) { statistics.x++; } } while (0)
+#define HIT(x) do { if (__builtin_expect(memstats, 0)) { statistics.x++; } } while (0)
+#define MEMDEBUG(x, ...) do { if (__builtin_expect(memdebug, 0)) printf(x, __VA_ARGS__); } while (0)
 
 platter um_alloc(platter size) {
 	platter p = { .ptr = calloc(size.v, 4) };
 	HIT(allocations);
 	if (memstats && size.v > statistics.maxsize) statistics.maxsize = size.v;
 
-	if (memdebug) {
-		printf("alloc(%u) = %p\n", size.v, p.ptr);
-	}
+	MEMDEBUG("alloc(%u) = %p\n", size.v, p.ptr);
 	return p;
 }
 
 platter um_realloc(platter p, uint32_t size) {
 	HIT(reallocations);
-	if (memdebug) {
-		printf("realloc(%p, %u) =", p.ptr, size);
-	}
+	MEMDEBUG("realloc(%p, %u) =", p.ptr, size);
 	p.ptr = realloc(p.ptr, size * 4);
-	if (memdebug) {
-		printf("%p\n", p.ptr);
-	}
+	MEMDEBUG("%p\n", p.ptr);
 	return p;
 }
 
@@ -48,9 +43,7 @@ platter um_duplicate(platter old) {
 	new.ptr = malloc(size);
 	memcpy(new.ptr, old.ptr, size);
 
-	if (memdebug) {
-		printf("duplicate(%p) = %p (%zu)\n", old.ptr, new.ptr, size);
-	}
+	MEMDEBUG("duplicate(%p) = %p (%zu)\n", old.ptr, new.ptr, size);
 	return new;
 }
 
@@ -58,9 +51,7 @@ void um_free(platter ptr) {
 	HIT(frees);
 	free(ptr.ptr);
 
-	if (memdebug) {
-		printf("free(%p)\n", ptr.ptr);
-	}
+	MEMDEBUG("free(%p)\n", ptr.ptr);
 }
 
 void um_memory_stats() {
