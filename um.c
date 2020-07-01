@@ -22,6 +22,7 @@ static int dumpregs = 0;
 #define option(X) if (argc > 1 && !strcmp(argv[1], "--"#X)) { argv++; argc--; X = 1; }
 
 int main(int argc, char** argv) {
+	setvbuf(stdout, NULL, _IOLBF, 0);
 	option(debug)
 	option(dumpregs)
 
