@@ -27,7 +27,13 @@ platter um_alloc(platter size) {
 
 platter um_realloc(platter p, uint32_t size) {
 	HIT(reallocations);
+	if (memdebug) {
+		printf("realloc(%p, %u) =", p.ptr, size);
+	}
 	p.ptr = realloc(p.ptr, size * 4);
+	if (memdebug) {
+		printf("%p\n", p.ptr);
+	}
 	return p;
 }
 
@@ -42,6 +48,9 @@ platter um_duplicate(platter old) {
 	new.ptr = malloc(size);
 	memcpy(new.ptr, old.ptr, size);
 
+	if (memdebug) {
+		printf("duplicate(%p) = %p (%zu)\n", old.ptr, new.ptr, size);
+	}
 	return new;
 }
 
