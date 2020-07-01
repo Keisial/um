@@ -6,6 +6,7 @@
 #include <err.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <malloc.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
@@ -220,8 +221,11 @@ void run_scroll(platter scroll, size_t size) {
                  */
                 if (REG(B)) {
 					free(scroll.ptr);
-					scroll = PLATTER(B); /* Not really a duplication... */
-					size = 0;
+
+					/* Duplicate the array and use the duplicate as array '0' */
+					size = malloc_usable_size(PLATTER(B).ptr);
+					scroll.ptr = malloc(size);
+					memcpy(scroll.ptr, ARRAY(B), size);
 				}
                 ef = REG(C) - 1;
 				break;
