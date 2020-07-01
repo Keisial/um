@@ -27,14 +27,23 @@ int main(int argc, char** argv) {
 	option(dumpregs)
 
 	if (argc < 2) {
-		errx(1, "Usage: %s [--debug] [--dumpregs] <scroll>", argv[0]);
+		errx(1, "Usage: %s [--debug] [--dumpregs] <scroll1> [<scroll2>...]", argv[0]);
 	}
-	run_scroll_file(argv[1]);
+
+	while (argv[1]) {
+		load_scroll_file(argv[1]);
+		argv++;
+	}
+
+	run_scroll();
 
 	return 0;
 }
 
-void run_scroll_file(const char* filename) {
+static platter scroll;
+static uint32_t scroll_size;
+
+void load_scroll_file(const char* filename) {
 	struct stat st;
 	int fd = open(filename, O_RDONLY);
 	if (fd == -1) {
@@ -49,16 +58,15 @@ void run_scroll_file(const char* filename) {
 	if (!st.st_size) {
 		errx(1, "Empty scroll %s", filename);
 	}
-	
-	platter scroll;
+
 	FILE* f = fdopen(fd, "rb");
 	int i, ok;
-	scroll.ptr = malloc(st.st_size);
+	scroll.ptr = realloc(scroll.ptr, scroll_size*4 + st.st_size);
 	for (i = 0; i < st.st_size / 4; i++) {
 		uint32_t temp;
 		ok = fread(&temp, 1, 4, f);
 		if (ok) {
-			scroll.ptr[i] = htonl(temp);
+			scroll.ptr[i + scroll_size] = htonl(temp);
 		} else {
 			/* Either an error or an EOF (the file was truncated?) */
 			err(1, "Error reading scroll");
@@ -66,10 +74,7 @@ void run_scroll_file(const char* filename) {
 	}
 	fclose(f);
 
-	run_scroll(scroll, st.st_size / 4);
-	/* Do not try to free scroll, run_scroll() can free it.
-	 * Program ends here, anyway.
-	 */
+	scroll_size += st.st_size / 4;
 }
 
 static platter registers[8];
@@ -90,10 +95,10 @@ void dumpregisters() {
 	puts("");
 }
 
-void run_scroll(platter scroll, size_t size) {
+void run_scroll() {
 	size_t ef; /* Execution finger */
 
-	for (ef = 0; ef < size || !size; ef++) {
+	for (ef = 0; ef < scroll_size; ef++) {
 		uint32_t instruction = scroll.ptr[ef];
 
 		switch (instruction >> 28) {
@@ -224,9 +229,9 @@ void run_scroll(platter scroll, size_t size) {
 					free(scroll.ptr);
 
 					/* Duplicate the array and use the duplicate as array '0' */
-					size = malloc_usable_size(PLATTER(B).ptr);
-					scroll.ptr = malloc(size);
-					memcpy(scroll.ptr, ARRAY(B), size);
+					scroll_size = malloc_usable_size(PLATTER(B).ptr);
+					scroll.ptr = malloc(scroll_size);
+					memcpy(scroll.ptr, ARRAY(B), scroll_size);
 				}
                 ef = REG(C) - 1;
 				break;
