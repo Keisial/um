@@ -9,6 +9,12 @@ um: $(OBJS)
 %.o: %.c
 	$(CC) -c $(CFLAGS) -o $@ $^
 
+codex.um: um
+	printf '(\\b.bb)(\\v.vv)06FHPVboundvarHRAk\np\n' | ./um docs/codex.umz | tail -c +196 > codex.um
+
+run: codex.um
+	./um codex.um
+
 clean:
 	rm -f um $(OBJS) sandmark.tmp
 
